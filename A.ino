@@ -1,43 +1,72 @@
-/* 
-  Appendix B — Hardware Timer PWM (Suggested enhancement, 20 kHz)
-  MEPCON2025: Solar-Ready Induction Heating — Medhat A. Abdel-Kawy et al.
-  Purpose: Example using Timer1 (ATmega328P) for stable PWM on OC1A/OC1B at 20 kHz.
-  Note: Demonstration only — not used in reported experiments.
 */
+  Appendix A — Software PWM (Experimental)
+  MEPCON2025: Solar-Ready Induction Heating — Medhat A. Abdel-Kawy et al.
+  Purpose: Simple software-based 3-phase PWM used in experiments.
+  Notes: Uses delayMicroseconds(); safe deadtime and safetyCheck() implemented.
 
-const uint32_t F_CPU_HZ   = 16000000UL; // Arduino UNO clock
-const uint32_t PWM_FREQ   = 20000UL;    // Desired switching frequency = 20 kHz
-const uint16_t DEADTIME_US = 2;         // Dead-time in microseconds (~32 timer counts)
+uint16_t delaypd;   // Pulse duration (µs) – controls switching frequency (~5 kHz)
+uint16_t deadtime;  // Dead time (µs) – prevents shoot-through
+
+// ===== Function: Safety Check =====
+// Ensures that no upper and lower switch of the same phase are ON simultaneously.
+// If a fault is detected, both switches are shut down immediately.
+void safetyCheck() {
+  // Phase A protection (AH = 2, AL = 3)
+  if (digitalRead(2) == HIGH && digitalRead(3) == HIGH) {
+    digitalWrite(2, LOW);
+    digitalWrite(3, LOW);
+  }
+  // Phase B protection (BH = 4, BL = 5)
+  if (digitalRead(4) == HIGH && digitalRead(5) == HIGH) {
+    digitalWrite(4, LOW);
+    digitalWrite(5, LOW);
+  }
+  // Phase C protection (CH = 6, CL = 7)
+  if (digitalRead(6) == HIGH && digitalRead(7) == HIGH) {
+    digitalWrite(6, LOW);
+    digitalWrite(7, LOW);
+  }
+}
 
 void setup() {
-  // Configure OC1A (Pin 9) and OC1B (Pin 10) as PWM outputs
-  pinMode(9, OUTPUT);  
-  pinMode(10, OUTPUT); 
+  // Configure output pins for each inverter switch
+  pinMode(2, OUTPUT); pinMode(3, OUTPUT);
+  pinMode(4, OUTPUT); pinMode(5, OUTPUT);
+  pinMode(6, OUTPUT); pinMode(7, OUTPUT);
 
-  // Stop Timer1 and clear settings
-  TCCR1A = 0;
-  TCCR1B = 0;
+  // Initialize all switches OFF
+  digitalWrite(2, LOW); digitalWrite(3, LOW);
+  digitalWrite(4, LOW); digitalWrite(5, LOW);
+  digitalWrite(6, LOW); digitalWrite(7, LOW);
 
-  // Calculate TOP for Fast PWM mode (Mode 14, ICR1 is TOP)
-  uint32_t top = (F_CPU_HZ / PWM_FREQ) - 1; // prescaler = 1 → top ≈ 799 for 20 kHz
-  if (top > 0xFFFF) top = 0xFFFF;
-  ICR1 = (uint16_t)top;  // Set TOP value
-
-  // Configure Fast PWM mode, non-inverting on both outputs
-  TCCR1A = (1 << COM1A1) | (1 << COM1B1) | (1 << WGM11);
-  TCCR1B = (1 << WGM13) | (1 << WGM12) | (1 << CS10); // prescaler = 1
-
-  // Set 50% duty on OC1A
-  OCR1A = (uint16_t)(top / 2); // ≈ 400 counts
-
-  // Compute dead-time in timer counts
-  uint32_t dt_counts = DEADTIME_US * (F_CPU_HZ / 1000000UL); // 2 µs × 16 MHz = 32 counts
-
-  // Apply dead-time offset to OC1B
-  OCR1B = (uint16_t)((OCR1A > dt_counts) ? (OCR1A - dt_counts) : 0);
+  // Define timing parameters
+  delaypd  = 200;  // Adjust for desired switching period (~5 kHz)
+  deadtime = 2;    // Safe switching dead-time (µs)
 }
 
 void loop() {
-  // Maintains fixed 20 kHz PWM @ 50% duty.
-  // Update OCR1A/OCR1B if modulation or phase shift is required.
+  digitalWrite(2, HIGH); digitalWrite(5, HIGH); digitalWrite(6, HIGH);
+  safetyCheck(); delayMicroseconds(delaypd);
+
+  digitalWrite(6, LOW); safetyCheck(); delayMicroseconds(deadtime);
+
+  digitalWrite(7, HIGH); safetyCheck(); delayMicroseconds(delaypd);
+
+  digitalWrite(5, LOW); safetyCheck(); delayMicroseconds(deadtime);
+
+  digitalWrite(4, HIGH); safetyCheck(); delayMicroseconds(delaypd);
+
+  digitalWrite(2, LOW); safetyCheck(); delayMicroseconds(deadtime);
+
+  digitalWrite(3, HIGH); safetyCheck(); delayMicroseconds(delaypd);
+
+  digitalWrite(7, LOW); safetyCheck(); delayMicroseconds(deadtime);
+
+  digitalWrite(6, HIGH); safetyCheck(); delayMicroseconds(delaypd);
+
+  digitalWrite(4, LOW); safetyCheck(); delayMicroseconds(deadtime);
+
+  digitalWrite(5, HIGH); safetyCheck(); delayMicroseconds(delaypd);
+
+  digitalWrite(3, LOW); safetyCheck(); delayMicroseconds(deadtime);
 }
