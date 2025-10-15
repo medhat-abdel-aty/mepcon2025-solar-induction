@@ -1,4 +1,4 @@
-/* 
+*/ 
   Appendix B — Hardware Timer PWM (Suggested enhancement, 20 kHz)
   MEPCON2025: Solar-Ready Induction Heating — Medhat A. Abdel-Kawy.
   Purpose: Example using Timer1 (ATmega328P) for stable PWM on OC1A/OC1B at 20 kHz.

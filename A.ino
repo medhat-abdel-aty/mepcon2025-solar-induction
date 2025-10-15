@@ -3,7 +3,7 @@
   MEPCON2025: Solar-Ready Induction Heating — Medhat A. Abdel-Kawy et al.
   Purpose: Simple software-based 3-phase PWM used in experiments.
   Notes: Uses delayMicroseconds(); safe deadtime and safetyCheck() implemented.
-
+*/
 uint16_t delaypd;   // Pulse duration (µs) – controls switching frequency (~5 kHz)
 uint16_t deadtime;  // Dead time (µs) – prevents shoot-through
 
